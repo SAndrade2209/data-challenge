@@ -140,7 +140,7 @@ class GoldMrrReportPipeline:
              count(CASE WHEN c.subscription_status = 'acquisition'  THEN 1 END) as acquisitions,
              count(CASE WHEN c.subscription_status = 'renewal'      THEN 1 END) as renewals,
              count(CASE WHEN c.subscription_status = 'cancellation' THEN 1 END) as cancellations,
-             COALESCE(SUM(m.eur_monthly_amount), 0) as mrr_eur
+             round(COALESCE(SUM(m.eur_monthly_amount), 0), 2) as mrr_eur
          from combined_df c
                   left join mrr_calculated_df m
                             on  c.platform          = m.platform
