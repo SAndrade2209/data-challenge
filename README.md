@@ -116,7 +116,7 @@ output/
 In here information such as dates and timestamps are stored as strings, and the data is not cleaned or validated yet.
 
 - **Silver**: This layer is responsible for cleaning, validating and normalising the data. In this layer the data is transformed to have the correct data types,
-missing values are handled and normalisations in the data are resolved. The silver tables are partitioned by `inserted_date_utc`, and the load from the bronze layer is done
+missing values are handled and normalisations in the data are resolved. The silver tables are partitioned by `_inserted_date_utc`, and the load from the bronze layer is done
 incrementally in a customisable way where it is possible to specify which column to use as a watermark to only load new data from the bronze layer.
 The silver delta tables are stored by source:
 ```
@@ -142,7 +142,7 @@ The pipeline for the project can be found in `src/helu/pipelines/mrr_pipeline.py
 The project was structured in a modular way, where each layer and its dependencies are well defined and separated. This allows that
 as the number of pipelines or entities grows, the organisation and maintenance of the codebase is easier, and also allows code reuse across pipelines if needed.
 
-the codebase is structured as follows:
+The codebase is structured as follows:
 
 ```
 src/
@@ -158,18 +158,22 @@ src/
  ```
 #### The `utils` folder
 Can be considered as the core of the project, it contains the shared logic across the layers as well as the individual core logic for each layer.
+
 It is divided into:
-Scripts that are used transversally across the layers such as:
+
+1. Scripts that are used transversally across the layers such as:
 - `job_parameters.py`: contains the logic to handle the parameters of the jobs.
 - `writer.py`: contains the logic to write the data to the output folders in the different layers, it handles the writing of the data in a consistent way across the layers and also handles the partitioning of the data.
 - `configs.py`: contains the configuration of the different layers such as the schema of the tables, the paths of the output folders, and other configurations that are used across the layers.
 - `tranversal_methods.py`: contains methods that are used across the layers.
-Folders with the core logic of each layer:
-`bronze_core`: contains the logic for the jobs in charge of ingesting the data into the bronze layer for the different sources.
+
+2. Folders with the core logic of each layer:
+
+- `bronze_core`: contains the logic for the jobs in charge of ingesting the data into the bronze layer for the different sources.
     It contains and main class that serves as templates for more custom ingestion but can be used as it is for simple ingestion jobs as well to avoid code duplication.
-`silver_core`: contains the logic for the jobs in charge of cleaning, validating and normalising the data for the different sources in the silver layer. 
+- `silver_core`: contains the logic for the jobs in charge of cleaning, validating and normalising the data for the different sources in the silver layer. 
 It contains and main class that serves as templates for more custom silver jobs but can be used as it is for simple cleaning and normalisation jobs as well to avoid code duplication.
-`gold_core`: contains the logic for the jobs in charge of the final aggregation and business logic to generate the MRR report in the gold layer. As it is the only job 
+- `gold_core`: contains the logic for the jobs in charge of the final aggregation and business logic to generate the MRR report in the gold layer. As it is the only job 
 it doesn't have a main class template but it allows that in the future if needed it can be created
 
 #### The `bronze`, `silver`, `gold` folder
@@ -210,7 +214,7 @@ schema evolution without requiring any code changes.
 - Deduplication of records in both Apfel and Fenster tables based on `customer_id` and taking the last record using the `event_timestamp` column
 - For exchange rates as it is a small dimension a full load is done every time.
 - The data types of the columns were changed to the correct ones, for example `price_amount` was changed to `Decimal` and `event_timestamp` was changed to `Timestamp`.
-- When data is not valid such as null values or invalid values the data is moved to another folder for audit and to not break the process.
+- When data is not valid such as null values or invalid values the data is moved to another table for audit and to not break the process.
 
 #### Silver to Gold
 - A QA function was added to check the data before writing into the gold layer, in this schema mismatches, 
