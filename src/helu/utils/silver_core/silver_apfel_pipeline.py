@@ -1,34 +1,46 @@
 from loguru import logger
-
-from pyspark.sql import  DataFrame
-from pyspark.sql.functions import col, trim, length, lower, lit, split, upper, when
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import col, lit, lower, split, trim, upper, when
 from pyspark.sql.types import StringType
 
 from src.helu.utils.silver_core.silver_data_process import SilverPipeline
 
+
 class SilverApfelPipeline(SilverPipeline):
     def get_valid_data(self, df: DataFrame) -> DataFrame:
-        logger.info(f"Getting valid data")
+        logger.info("Getting valid data")
         df_check_ts_data = df.withColumn(
-            "is_timestamp_valid",
-            (col("signup_timestamp") <= col("event_timestamp"))
+            "is_timestamp_valid", (col("signup_timestamp") <= col("event_timestamp"))
         )
         df_ts_invalid = df_check_ts_data.where(~col("is_timestamp_valid"))
-        df_ts_valid = df_check_ts_data.where(col("is_timestamp_valid")).drop("is_timestamp_valid")
+        df_ts_valid = df_check_ts_data.where(col("is_timestamp_valid")).drop(
+            "is_timestamp_valid"
+        )
 
         if df_ts_invalid and not df_ts_invalid.isEmpty():
-            logger.info(f"Audit invalid data where sihgnup_timestamp is after event_timestamp")
-            df_ts_invalid = df_ts_invalid.withColumn("_invalid_reason", lit("invalid_timestamp_data"))
-            self.writer.append_data(df=df_ts_invalid, custom_table_name="apfel_invalid_data")
+            logger.info(
+                "Audit invalid data where sihgnup_timestamp is after event_timestamp"
+            )
+            df_ts_invalid = df_ts_invalid.withColumn(
+                "_invalid_reason", lit("invalid_timestamp_data")
+            )
+            self.writer.append_data(
+                df=df_ts_invalid, custom_table_name="apfel_invalid_data"
+            )
 
         for field in df_ts_valid.schema.fields:
-            if isinstance(field.dataType, StringType) and field.name in ["event_type", "processing_status"]:
-                df_ts_valid = df_ts_valid.withColumn(field.name, lower(trim(col(field.name))))
+            if isinstance(field.dataType, StringType) and field.name in [
+                "event_type",
+                "processing_status",
+            ]:
+                df_ts_valid = df_ts_valid.withColumn(
+                    field.name, lower(trim(col(field.name)))
+                )
 
         valid_financials = (
-                (col("price_amount") >= 0) &
-                (col("tax_amount") >= 0) &
-                col("currency").isNotNull()
+            (col("price_amount") >= 0)
+            & (col("tax_amount") >= 0)
+            & col("currency").isNotNull()
         )
 
         valid_sub_status = [
@@ -51,13 +63,17 @@ class SilverApfelPipeline(SilverPipeline):
 
         if df_silver_dirty and not df_silver_dirty.isEmpty():
             logger.info("Auditing invalid business data")
-            df_silver_dirty = df_silver_dirty.withColumn("_invalid_reason", lit("invalid_business_data"))
-            self.writer.append_data(df=df_silver_dirty, custom_table_name="apfel_invalid_data")
+            df_silver_dirty = df_silver_dirty.withColumn(
+                "_invalid_reason", lit("invalid_business_data")
+            )
+            self.writer.append_data(
+                df=df_silver_dirty, custom_table_name="apfel_invalid_data"
+            )
 
         return df_silver_clean
 
     def get_columns_enriched(self, df: DataFrame) -> DataFrame:
-        logger.info(f"Enriching data")
+        logger.info("Enriching data")
         enriched_df = df.withColumn(
             "subscription_status", split(col("event_type"), "_").getItem(1)
         )
@@ -80,9 +96,7 @@ class SilverApfelPipeline(SilverPipeline):
         logger.info("Starting")
         bronze_df = self.read_bronze()
         if bronze_df and not bronze_df.isEmpty():
-            bronze_df = self.writer.add_metadata_columns(
-                df=bronze_df, layer="silver"
-            )
+            bronze_df = self.writer.add_metadata_columns(df=bronze_df, layer="silver")
 
             renamed_df = self.rename_columns(df=bronze_df)
             casted_df = self.cast_timestamps_data(df=renamed_df)

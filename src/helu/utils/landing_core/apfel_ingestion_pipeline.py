@@ -1,9 +1,11 @@
-from src.helu.utils.landing_core.landing_ingestion import LandingIngestion
-from loguru import logger
-import json
 import csv
 import io
+import json
 from typing import Optional
+
+from loguru import logger
+
+from src.helu.utils.landing_core.landing_ingestion import LandingIngestion
 
 
 class ApfelLandingIngestion(LandingIngestion):

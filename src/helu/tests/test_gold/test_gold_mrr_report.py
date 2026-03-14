@@ -1,20 +1,21 @@
+from datetime import date, datetime
 from unittest import TestCase
+
 from mock import patch
-from datetime import datetime, date
-from src.helu.utils.job_parameters import JobParameters
-from src.helu.utils.gold_core.gold_mrr_report_pipeline import GoldMrrReportPipeline
+from pyspark.sql import Row, SparkSession
 from pyspark.sql.types import (
     DateType,
     DoubleType,
     LongType,
+    StringType,
     StructField,
     StructType,
     TimestampType,
-    StringType,
 )
-from pyspark.sql import Row
-from pyspark.sql import SparkSession
 from pyspark.testing import assertDataFrameEqual
+
+from src.helu.utils.gold_core.gold_mrr_report_pipeline import GoldMrrReportPipeline
+from src.helu.utils.job_parameters import JobParameters
 
 
 class TestMaterializedViewWorkExperiences(TestCase):
@@ -208,7 +209,6 @@ class TestMaterializedViewWorkExperiences(TestCase):
             ]
         )
 
-
         combined_expected_data = [
             Row(
                 platform="apfel",
@@ -300,7 +300,11 @@ class TestMaterializedViewWorkExperiences(TestCase):
         self.exchange_rate_df.createOrReplaceTempView("exchange_rates")
 
         self.pipeline.spark = self.sql_context
-        mock_read_silver_tables.return_value = (self.apfel_df, self.fenster_df, self.exchange_rate_df)
+        mock_read_silver_tables.return_value = (
+            self.apfel_df,
+            self.fenster_df,
+            self.exchange_rate_df,
+        )
 
         combined_df = self.pipeline.get_combined_report()
 
@@ -327,18 +331,88 @@ class TestMaterializedViewWorkExperiences(TestCase):
 
         final_report_expected_data = [
             # apfel DE EUR standard — 2 acquisitions (Feb + Mar), 0 renewals, 0 cancellations
-            Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-02", original_currency="EUR", acquisitions=1, renewals=0, cancellations=0, mrr_eur=10.0),
-            Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-03", original_currency="EUR", acquisitions=1, renewals=0, cancellations=0, mrr_eur=15.0 / 12),
+            Row(
+                platform="apfel",
+                subscription_type="standard",
+                country="DE",
+                report_month="2025-02",
+                original_currency="EUR",
+                acquisitions=1,
+                renewals=0,
+                cancellations=0,
+                mrr_eur=10.0,
+            ),
+            Row(
+                platform="apfel",
+                subscription_type="standard",
+                country="DE",
+                report_month="2025-03",
+                original_currency="EUR",
+                acquisitions=1,
+                renewals=0,
+                cancellations=0,
+                mrr_eur=15.0 / 12,
+            ),
             # apfel DE USD standard — 0 acquisitions, 1 renewal, 0 cancellations
-            Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-05", original_currency="USD", acquisitions=0, renewals=1, cancellations=0, mrr_eur=round((12.0 / 12) * 0.5, 2)),
+            Row(
+                platform="apfel",
+                subscription_type="standard",
+                country="DE",
+                report_month="2025-05",
+                original_currency="USD",
+                acquisitions=0,
+                renewals=1,
+                cancellations=0,
+                mrr_eur=round((12.0 / 12) * 0.5, 2),
+            ),
             # apfel GB USD premium — 0 acquisitions, 0 renewals, 1 cancellation
-            Row(platform="apfel", subscription_type="premium", country="GB", report_month="2025-04", original_currency="USD", acquisitions=0, renewals=0, cancellations=1, mrr_eur=0.0),
+            Row(
+                platform="apfel",
+                subscription_type="premium",
+                country="GB",
+                report_month="2025-04",
+                original_currency="USD",
+                acquisitions=0,
+                renewals=0,
+                cancellations=1,
+                mrr_eur=0.0,
+            ),
             # fenster USA USD standard — 1 acquisition
-            Row(platform="fenster", subscription_type="standard", country="USA", report_month="2025-02", original_currency="USD", acquisitions=1, renewals=0, cancellations=0, mrr_eur=round(10.0 * 0.2, 2)),
+            Row(
+                platform="fenster",
+                subscription_type="standard",
+                country="USA",
+                report_month="2025-02",
+                original_currency="USD",
+                acquisitions=1,
+                renewals=0,
+                cancellations=0,
+                mrr_eur=round(10.0 * 0.2, 2),
+            ),
             # fenster USA USD premium — 1 renewal
-            Row(platform="fenster", subscription_type="premium", country="USA", report_month="2025-03", original_currency="USD", acquisitions=0, renewals=1, cancellations=0, mrr_eur=round((12.0 / 12) * 0.3, 2)),
+            Row(
+                platform="fenster",
+                subscription_type="premium",
+                country="USA",
+                report_month="2025-03",
+                original_currency="USD",
+                acquisitions=0,
+                renewals=1,
+                cancellations=0,
+                mrr_eur=round((12.0 / 12) * 0.3, 2),
+            ),
             # fenster GB USD premium — 1 cancellation
-            Row(platform="fenster", subscription_type="premium", country="GB", report_month="2025-04", original_currency="USD", acquisitions=0, renewals=0, cancellations=1, mrr_eur=0.0),
+            Row(
+                platform="fenster",
+                subscription_type="premium",
+                country="GB",
+                report_month="2025-04",
+                original_currency="USD",
+                acquisitions=0,
+                renewals=0,
+                cancellations=1,
+                mrr_eur=0.0,
+            ),
         ]
 
         final_report_expected_df = self.sql_context.createDataFrame(
@@ -364,7 +438,17 @@ class TestMaterializedViewWorkExperiences(TestCase):
             ]
         )
         valid_data = [
-            Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-02", original_currency="EUR", acquisitions=1, renewals=0, cancellations=0, mrr_eur=10.0),
+            Row(
+                platform="apfel",
+                subscription_type="standard",
+                country="DE",
+                report_month="2025-02",
+                original_currency="EUR",
+                acquisitions=1,
+                renewals=0,
+                cancellations=0,
+                mrr_eur=10.0,
+            ),
         ]
         valid_df = self.sql_context.createDataFrame(valid_data, schema=valid_schema)
 
@@ -403,9 +487,16 @@ class TestMaterializedViewWorkExperiences(TestCase):
             ]
         )
         incomplete_data = [
-            Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-02"),
+            Row(
+                platform="apfel",
+                subscription_type="standard",
+                country="DE",
+                report_month="2025-02",
+            ),
         ]
-        incomplete_df = self.sql_context.createDataFrame(incomplete_data, schema=incomplete_schema)
+        incomplete_df = self.sql_context.createDataFrame(
+            incomplete_data, schema=incomplete_schema
+        )
 
         with self.assertRaises(Exception):
             self.pipeline.qa_checks(df_to_check=incomplete_df)
@@ -420,11 +511,25 @@ class TestMaterializedViewWorkExperiences(TestCase):
             expected_schema=self.report_expected_schema,
         )
         pipeline_with_schema = GoldMrrReportPipeline(
-            spark=self.spark, job_parameters=job_parameters_with_schema, writer=self.writer
+            spark=self.spark,
+            job_parameters=job_parameters_with_schema,
+            writer=self.writer,
         )
 
         valid_df = self.sql_context.createDataFrame(
-            [Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-02", original_currency="EUR", acquisitions=1, renewals=0, cancellations=0, mrr_eur=10.0)],
+            [
+                Row(
+                    platform="apfel",
+                    subscription_type="standard",
+                    country="DE",
+                    report_month="2025-02",
+                    original_currency="EUR",
+                    acquisitions=1,
+                    renewals=0,
+                    cancellations=0,
+                    mrr_eur=10.0,
+                )
+            ],
             schema=self.report_expected_schema,
         )
 
@@ -432,7 +537,9 @@ class TestMaterializedViewWorkExperiences(TestCase):
         try:
             pipeline_with_schema.qa_checks(df_to_check=valid_df)
         except Exception as e:
-            self.fail(f"qa_checks raised an unexpected exception with a matching schema: {e}")
+            self.fail(
+                f"qa_checks raised an unexpected exception with a matching schema: {e}"
+            )
 
     def test_qa_checks_raises_on_schema_mismatch(self):
         job_parameters_with_schema = JobParameters(
@@ -444,7 +551,9 @@ class TestMaterializedViewWorkExperiences(TestCase):
             expected_schema=self.report_expected_schema,
         )
         pipeline_with_schema = GoldMrrReportPipeline(
-            spark=self.spark, job_parameters=job_parameters_with_schema, writer=self.writer
+            spark=self.spark,
+            job_parameters=job_parameters_with_schema,
+            writer=self.writer,
         )
 
         wrong_schema = StructType(
@@ -461,10 +570,21 @@ class TestMaterializedViewWorkExperiences(TestCase):
             ]
         )
         wrong_schema_df = self.sql_context.createDataFrame(
-            [Row(platform="apfel", subscription_type="standard", country="DE", report_month="2025-02", original_currency="EUR", acquisitions=1, renewals=0, cancellations=0, mrr_eur="10.0")],
+            [
+                Row(
+                    platform="apfel",
+                    subscription_type="standard",
+                    country="DE",
+                    report_month="2025-02",
+                    original_currency="EUR",
+                    acquisitions=1,
+                    renewals=0,
+                    cancellations=0,
+                    mrr_eur="10.0",
+                )
+            ],
             schema=wrong_schema,
         )
 
         with self.assertRaises(ValueError):
             pipeline_with_schema.qa_checks(df_to_check=wrong_schema_df)
-

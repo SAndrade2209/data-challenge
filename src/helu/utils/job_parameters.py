@@ -1,21 +1,32 @@
-from dataclasses import dataclass
-from src.helu.utils.config import BRONZE, BRONZE_DIR, GOLD_DIR, GOLD, LANDING_DIR, SILVER_DIR, SILVER
 import os
+from dataclasses import dataclass
+
 from pyspark.sql.types import StructType
+
+from src.helu.utils.config import (
+    BRONZE,
+    BRONZE_DIR,
+    GOLD,
+    GOLD_DIR,
+    LANDING_DIR,
+    SILVER,
+    SILVER_DIR,
+)
+
 
 @dataclass
 class JobParameters:
     source: str
     destination_schema: str
-    origin_schema: str|None = None
-    origin_path: str |None = None
-    destination_path: str |None = None
+    origin_schema: str | None = None
+    origin_path: str | None = None
+    destination_path: str | None = None
     landing_schema: StructType | None = None
     expected_schema: StructType | None = None
-    landing_path: str|None = None
+    landing_path: str | None = None
     partitioned_columns: list | None = None
-    merge_logic: str|None = None
-    update_condition: str|None = None
+    merge_logic: str | None = None
+    update_condition: str | None = None
     identifier: str | None = None
     deduplication_sorting_column: str | None = None
     is_dimension: bool | None = False
@@ -24,8 +35,14 @@ class JobParameters:
 
     def __post_init__(self):
 
-        if self.destination_schema != BRONZE and self.is_dimension is False and (self.identifier is None or self.deduplication_sorting_column is None) :
-            raise ValueError("For silver and gold jobs, identifier and deduplication_sorting_column parameters must be provided for deduplication purposes.")
+        if (
+            self.destination_schema != BRONZE
+            and self.is_dimension is False
+            and (self.identifier is None or self.deduplication_sorting_column is None)
+        ):
+            raise ValueError(
+                "For silver and gold jobs, identifier and deduplication_sorting_column parameters must be provided for deduplication purposes."
+            )
 
         if not self.destination_path:
             if self.destination_schema == BRONZE:

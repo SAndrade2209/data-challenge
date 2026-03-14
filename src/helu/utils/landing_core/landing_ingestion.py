@@ -1,20 +1,26 @@
-from src.helu.utils.config import LANDING_DIR, API_BASE_URL, DATA_DIR
-from loguru import logger
-import requests
 import os
 from datetime import datetime, timezone
 from typing import Optional, Union
+
+import requests
+from loguru import logger
+
+from src.helu.utils.config import API_BASE_URL, DATA_DIR, LANDING_DIR
 from src.helu.utils.definitions_enums import SourceFormat
 
 
 class LandingIngestion:
-    def __init__(self, source: str,
-                 source_format: Union[str, SourceFormat],
-                 endpoint: str = None,
-                 fallback_data_filename: str = None):
+    def __init__(
+        self,
+        source: str,
+        source_format: Union[str, SourceFormat],
+        endpoint: str = None,
+        fallback_data_filename: str = None,
+    ):
         self.source = source
         self.source_format = (
-            source_format if isinstance(source_format, SourceFormat)
+            source_format
+            if isinstance(source_format, SourceFormat)
             else SourceFormat.from_string(source_format)
         )
         self.source_inbound_dir_name = source.replace("-", "_")
@@ -27,14 +33,20 @@ class LandingIngestion:
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
-            logger.info(f"API OK: {url} -> {response.status_code} ({len(response.content)} bytes)")
+            logger.info(
+                f"API OK: {url} -> {response.status_code} ({len(response.content)} bytes)"
+            )
             return response
         except requests.exceptions.RequestException as e:
             logger.warning(f"API FAIL: {url} -> {e}")
             return None
 
     def read_csv_fallback(self) -> Optional[str]:
-        csv_filename = f"{self.data_filename}.csv" if self.data_filename else f"{self.source_inbound_dir_name}.csv"
+        csv_filename = (
+            f"{self.data_filename}.csv"
+            if self.data_filename
+            else f"{self.source_inbound_dir_name}.csv"
+        )
         filepath = os.path.join(DATA_DIR, csv_filename)
         try:
             with open(filepath, "r", encoding="utf-8") as f:

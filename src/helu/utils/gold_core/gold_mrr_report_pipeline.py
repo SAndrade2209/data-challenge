@@ -1,23 +1,30 @@
 from loguru import logger
-from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql import DataFrame, SparkSession
+
 from src.helu.utils.job_parameters import JobParameters
 from src.helu.utils.writer import Writer
 
 
 class GoldMrrReportPipeline:
-
-    def __init__(self, spark: SparkSession, job_parameters: JobParameters, writer: Writer = None):
+    def __init__(
+        self, spark: SparkSession, job_parameters: JobParameters, writer: Writer = None
+    ):
         self.spark = spark
         self.job_parameters = job_parameters
-        self.writer = writer if writer else     Writer(spark, job_parameters)
-
+        self.writer = writer if writer else Writer(spark, job_parameters)
 
     def read_silver_tables(self) -> tuple[DataFrame, DataFrame, DataFrame]:
         logger.info("Reading Silver tables: apfel, fenster, exchange_rates")
 
-        apfel_df = self.spark.read.format("delta").load(f"{self.job_parameters.origin_path}/apfel")
-        fenster_df = self.spark.read.format("delta").load(f"{self.job_parameters.origin_path}/fenster")
-        exchange_df = self.spark.read.format("delta").load(f"{self.job_parameters.origin_path}/exchange_rates")
+        apfel_df = self.spark.read.format("delta").load(
+            f"{self.job_parameters.origin_path}/apfel"
+        )
+        fenster_df = self.spark.read.format("delta").load(
+            f"{self.job_parameters.origin_path}/fenster"
+        )
+        exchange_df = self.spark.read.format("delta").load(
+            f"{self.job_parameters.origin_path}/exchange_rates"
+        )
 
         return apfel_df, fenster_df, exchange_df
 
@@ -90,7 +97,6 @@ class GoldMrrReportPipeline:
                              select * from fenster_norm 
                           """
         return apfer_eur_query
-
 
     def get_combined_report(self):
         apfel_df, fenster_df, exchange_df = self.read_silver_tables()
@@ -177,27 +183,53 @@ class GoldMrrReportPipeline:
                 raise ValueError("Final report is empty!")
 
             df_columns = df_to_check.columns
-            expected_columns = {"platform", "subscription_type", "country", "report_month", "original_currency", "acquisitions", "renewals", "cancellations", "mrr_eur"}
+            expected_columns = {
+                "platform",
+                "subscription_type",
+                "country",
+                "report_month",
+                "original_currency",
+                "acquisitions",
+                "renewals",
+                "cancellations",
+                "mrr_eur",
+            }
             if not expected_columns.issubset(set(df_columns)):
-                logger.error(f"Final report is missing expected columns. Found columns: {df_columns}")
+                logger.error(
+                    f"Final report is missing expected columns. Found columns: {df_columns}"
+                )
                 raise ValueError("Final report is missing expected columns!")
 
             if self.job_parameters.expected_schema is not None:
                 expected_schema = self.job_parameters.expected_schema
-                if sorted(df_to_check.dtypes) != sorted([(f.name, f.dataType.simpleString()) for f in expected_schema.fields]):
+                if sorted(df_to_check.dtypes) != sorted(
+                    [
+                        (f.name, f.dataType.simpleString())
+                        for f in expected_schema.fields
+                    ]
+                ):
                     differences = set(df_to_check.dtypes).symmetric_difference(
-                        set((f.name, f.dataType.simpleString()) for f in expected_schema.fields)
+                        set(
+                            (f.name, f.dataType.simpleString())
+                            for f in expected_schema.fields
+                        )
                     )
                     logger.error(f"Schema mismatch in final report: {differences}")
-                    raise ValueError(f"Final report schema does not match expected schema. Differences: {differences}")
+                    raise ValueError(
+                        f"Final report schema does not match expected schema. Differences: {differences}"
+                    )
 
             for column in df_columns:
                 null_count = df_to_check.filter(df_to_check[column].isNull()).count()
                 if null_count > 0:
-                    logger.warning(f"Column '{column}' contains {null_count} null values.")
+                    logger.warning(
+                        f"Column '{column}' contains {null_count} null values."
+                    )
                     raise ValueError(f"Column '{column}' contains null values!")
 
-            logger.success(f"QA checks {self.job_parameters.source} passed successfully!")
+            logger.success(
+                f"QA checks {self.job_parameters.source} passed successfully!"
+            )
         else:
             logger.error("Final report dataframe is None or empty!")
             raise ValueError("Final report is empty!")
@@ -212,4 +244,3 @@ class GoldMrrReportPipeline:
         self.writer.create_table(df=gold_df)
 
         logger.info("Finished")
-

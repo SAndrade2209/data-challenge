@@ -1,22 +1,22 @@
 from loguru import logger
 
-# Landing
-from src.helu.landing.apfel_ingestion import landing_apfel_ingestion
-from src.helu.landing.fenster_ingestion import landing_fenster_ingestion
-from src.helu.landing.exchange_rate_ingestion import landing_exchange_ingestion
-
 # Bronze
 from src.helu.bronze.bronze_apfel import bronze_apfel_job
-from src.helu.bronze.bronze_fenster import bronze_fenster_job
 from src.helu.bronze.bronze_exchange_rate import bronze_exchange_job
-
-# Silver
-from src.helu.silver.silver_apfel import silver_apfel_job
-from src.helu.silver.silver_fenster import silver_fenster_job
-from src.helu.silver.silver_exchange_rate import silver_exchange_job
+from src.helu.bronze.bronze_fenster import bronze_fenster_job
 
 # Gold
 from src.helu.gold.gold_mrr_report import gold_mrr_report_job
+
+# Landing
+from src.helu.landing.apfel_ingestion import landing_apfel_ingestion
+from src.helu.landing.exchange_rate_ingestion import landing_exchange_ingestion
+from src.helu.landing.fenster_ingestion import landing_fenster_ingestion
+
+# Silver
+from src.helu.silver.silver_apfel import silver_apfel_job
+from src.helu.silver.silver_exchange_rate import silver_exchange_job
+from src.helu.silver.silver_fenster import silver_fenster_job
 
 
 def apfel_pipeline():
